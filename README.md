@@ -586,6 +586,35 @@ wt
 
 ---
 
+# 🚀 Production Deployment Checklist
+Before deploying to production:
+
+[] Set `NODE_ENV=production`
+
+[] Generate **unique** strong secrets (32+ chars each) for `JWT_ACCESS_SECRET`, `JWT_REFRESH_SECRET`, `CSRF_SECRET`
+
+[] Set `COOKIE_SECURE=true` (requires HTTPS)
+
+[] Set `FRONTEND_URL` to your actual frontend origin
+
+[] Replace mock `EmailService` in `src/services/email.service.ts` with real SMTP (nodemailer, SES, SendGrid, etc.)
+
+[] Run `npm run build` then `npm run prisma:deploy`
+
+[] Run behind a reverse proxy (nginx / ALB) — `trust proxy` is already enabled
+
+[] Configure log shipping (Loki / CloudWatch / Datadog) — prod logs are JSON to stdout
+
+[] Set up automated SQLite backups (cron + `sqlite3 .backup`)
+
+[] Add monitoring (Prometheus, Sentry, etc.)
+
+[] Review and tighten rate limits based on real traffic
+
+[] Enable HTTPS / HSTS at the load balancer level
+
+---
+
 # 🤝 Contributing
 1. Fork the repository
 2. Create a feature branch: git checkout -b feat/my-feature

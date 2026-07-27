@@ -1,0 +1,51 @@
+version: "3.9"
+
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: auth_api
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      APP_NAME: "Auth System"
+      APP_URL: http://localhost:3000
+      FRONTEND_URL: http://localhost:5173
+
+      # SQLite — absolute path inside container
+      DATABASE_URL: "file:/app/data/auth.db"
+
+      JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:-please_change_me_access_secret_min_32_chars_long}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-please_change_me_refresh_secret_min_32_chars_long}
+      JWT_ACCESS_EXPIRES_IN: 15m
+      JWT_REFRESH_EXPIRES_IN: 30d
+
+      ARGON2_MEMORY_COST: 65536
+      ARGON2_TIME_COST: 3
+      ARGON2_PARALLELISM: 4
+
+      COOKIE_DOMAIN: localhost
+      COOKIE_SECURE: "false"
+      COOKIE_SAMESITE: lax
+
+      CSRF_SECRET: ${CSRF_SECRET:-please_change_me_csrf_secret_min_32_chars_long}
+      CSRF_COOKIE_NAME: x-csrf-token
+      CSRF_HEADER_NAME: x-csrf-token
+
+      RATE_LIMIT_WINDOW_MS: 900000
+      RATE_LIMIT_MAX: 100
+      AUTH_RATE_LIMIT_MAX: 10
+
+      EMAIL_ENABLED: "false"
+      EMAIL_FROM: no-reply@example.com
+      LOG_LEVEL: info
+    ports:
+      - "3000:3000"
+    volumes:
+      - sqlite_data:/app/data   # Persist the DB file across container restarts
+
+volumes:
+  sqlite_data:
+    driver: local

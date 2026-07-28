@@ -22,10 +22,10 @@ What you expected to happen.
 What actually happened.
 
 ## Environment
-- OS: [e.g., Windows 11]
-- Node.js: [e.g., 20.10.0]
-- Database: [SQLite / PostgreSQL]
-- Branch / commit: [e.g., main @ abc1234]
+- OS: [`e.g.`, `Windows 11`]
+- Node.js: [`e.g.`, `20.10.0`]
+- Database: [`SQLite` / `PostgreSQL`]
+- Branch / commit: [`e.g.`, `main @ abc1234`]
 
 ## Logs
 Paste relevant logs here (REDACT any secrets!)

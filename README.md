@@ -2,7 +2,14 @@
 
 # 🔐 Auth System
 
-**A production-ready authentication API built with TypeScript, Express, Prisma & SQLite.**
+### Production-Ready Authentication API
+### Built with TypeScript • Express • Prisma • SQLite
+
+<p>
+Secure, scalable, and modern authentication system implementing
+JWT Rotation, CSRF Protection, Refresh Token Reuse Detection,
+Argon2id password hashing, and production-grade security practices.
+</p>
 
 <p align="center">
   <img src="https://img.shields.io/badge/TypeScript-007ACC?style=for-the-badge&logo=typescript&logoColor=white" alt="TypeScript">
@@ -16,6 +23,26 @@
 
 [Features](#-features) • [Quick Start](#-quick-start) • [API Docs](#-api-endpoints) • [Security](#-security-architecture) • [Troubleshooting](#-troubleshooting)
 </div>
+
+---
+
+# 📸 Preview
+
+<p align="center">
+<img src="./docs/preview-1.png" width="900">
+</p>
+<p align="center">
+<img src="./docs/preview-2.png" width="900">
+</p>
+<p align="center">
+<img src="./docs/preview-3.png" width="900">
+</p>
+<p align="center">
+<img src="./docs/preview-4.png" width="900">
+</p>
+<p align="center">
+<img src="./docs/preview-5.png" width="900">
+</p>
 
 ---
 
@@ -54,6 +81,23 @@
 ---
 
 # 📁 Project Structure
+```markdown
+Client
+   │
+   ▼
+Express Router
+   │
+Controllers
+   │
+Services
+   │
+Repositories
+   │
+ Prisma ORM
+   │
+ SQLite
+ ```
+
 ```text
 auth-system/
 ├── prisma/

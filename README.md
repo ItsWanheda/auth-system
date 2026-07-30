@@ -29,19 +29,19 @@ Argon2id password hashing, and production-grade security practices.
 # 📸 Preview
 
 <p align="center">
-<img src="./docs/preview-1.png" width="900">
+<img src="./docs/Preview-1.png" width="900">
 </p>
 <p align="center">
-<img src="./docs/preview-2.png" width="900">
+<img src="./docs/Preview-2.png" width="900">
 </p>
 <p align="center">
-<img src="./docs/preview-3.png" width="900">
+<img src="./docs/Preview-3.png" width="900">
 </p>
 <p align="center">
-<img src="./docs/preview-4.png" width="900">
+<img src="./docs/Preview-4.png" width="900">
 </p>
 <p align="center">
-<img src="./docs/preview-5.png" width="900">
+<img src="./docs/Preview-5.png" width="900">
 </p>
 
 ---

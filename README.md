@@ -348,7 +348,7 @@ curl -X POST http://localhost:3000/api/auth/login \
 This sets two cookies automatically:
 
 * `access_token` (HttpOnly, 15 min)
-* `refresh_token` (HttpOnly, scoped to `/auth`, 30 days)
+* `refresh_token` (HttpOnly, scoped to `/auth`, `30 days`)
 **Get Profile — `GET /api/users/me`**
 ```bash
 curl http://localhost:3000/api/users/me -b cookies.txt
@@ -636,29 +636,29 @@ wt
 # 🚀 Production Deployment Checklist
 Before deploying to production:
 
-[] Set `NODE_ENV=production`
+- [ ] Set `NODE_ENV=production`
 
-[] Generate **unique** strong secrets (32+ chars each) for `JWT_ACCESS_SECRET`, `JWT_REFRESH_SECRET`, `CSRF_SECRET`
+- [ ] Generate **unique** strong secrets (32+ chars each) for `JWT_ACCESS_SECRET`, `JWT_REFRESH_SECRET`, `CSRF_SECRET`
 
-[] Set `COOKIE_SECURE=true` (requires HTTPS)
+- [ ] Set `COOKIE_SECURE=true` (requires HTTPS)
 
-[] Set `FRONTEND_URL` to your actual frontend origin
+- [ ] Set `FRONTEND_URL` to your actual frontend origin
 
-[] Replace mock `EmailService` in `src/services/email.service.ts` with real SMTP (nodemailer, SES, SendGrid, etc.)
+- [ ] Replace mock `EmailService` in `src/services/email.service.ts` with real SMTP (nodemailer, SES, SendGrid, etc.)
 
-[] Run `npm run build` then `npm run prisma:deploy`
+- [ ] Run `npm run build` then `npm run prisma:deploy`
 
-[] Run behind a reverse proxy (nginx / ALB) — `trust proxy` is already enabled
+- [ ] Run behind a reverse proxy (nginx / ALB) — `trust proxy` is already enabled
 
-[] Configure log shipping (Loki / CloudWatch / Datadog) — prod logs are JSON to stdout
+- [ ] Configure log shipping (Loki / CloudWatch / Datadog) — prod logs are JSON to stdout
 
-[] Set up automated SQLite backups (cron + `sqlite3 .backup`)
+- [ ] Set up automated SQLite backups (cron + `sqlite3 .backup`)
 
-[] Add monitoring (Prometheus, Sentry, etc.)
+- [ ] Add monitoring (Prometheus, Sentry, etc.)
 
-[] Review and tighten rate limits based on real traffic
+- [ ] Review and tighten rate limits based on real traffic
 
-[] Enable HTTPS / HSTS at the load balancer level
+- [ ] Enable HTTPS / HSTS at the load balancer level
 
 ---
 

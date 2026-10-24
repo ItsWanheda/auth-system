@@ -1,5 +1,6 @@
 import { userRepository } from '../repositories/user.repository';
 import { refreshTokenRepository } from '../repositories/refresh-token.repository';
+import { prisma } from '../prisma/prisma.client';
 import {
   signAccessToken,
   signRefreshToken,
@@ -52,8 +53,8 @@ export class TokenService {
   }
 
   /**
-   * Rotates a refresh token with reuse detection.
-   * If a previously revoked token is reused, ALL tokens for that user are revoked.
+   * Atomically claims the old refresh token and creates its replacement.
+   * Exactly one concurrent request can claim an active token.
    */
   async rotateRefreshToken(
     refreshToken: string,
@@ -62,28 +63,68 @@ export class TokenService {
     let payload;
     try {
       payload = verifyRefreshToken(refreshToken);
-    } catch (err) {
+    } catch {
       throw new UnauthorizedError('Invalid refresh token');
     }
 
     const tokenHash = sha256(refreshToken);
-    const stored = await refreshTokenRepository.findByHash(tokenHash);
+    const now = new Date();
 
+    const rotated = await prisma.$transaction(async (tx) => {
+      const claimed = await tx.refreshToken.updateMany({
+        where: {
+          tokenHash,
+          userId: payload.sub,
+          revoked: false,
+          expiresAt: { gt: now },
+        },
+        data: { revoked: true },
+      });
+
+      if (claimed.count !== 1) return null;
+
+      const user = await tx.user.findUnique({ where: { id: payload.sub } });
+      if (!user) throw new UnauthorizedError('User no longer exists');
+
+      const nextAccessToken = signAccessToken({
+        sub: user.id,
+        email: user.email,
+        username: user.username,
+      });
+      const nextRefreshToken = signRefreshToken({
+        sub: user.id,
+        email: user.email,
+        username: user.username,
+      });
+
+      await tx.refreshToken.create({
+        data: {
+          userId: user.id,
+          tokenHash: sha256(nextRefreshToken),
+          expiresAt: decodeRefreshTokenExpiry(nextRefreshToken),
+          userAgent: metadata.userAgent,
+          ipAddress: metadata.ipAddress,
+        },
+      });
+
+      return { accessToken: nextAccessToken, refreshToken: nextRefreshToken };
+    });
+
+    if (rotated) return rotated;
+
+    // Preserve replay detection when an already-revoked/expired token is presented.
+    const stored = await refreshTokenRepository.findByHash(tokenHash);
     if (!stored || stored.userId !== payload.sub) {
       throw new UnauthorizedError('Refresh token not recognized');
     }
 
-    // REUSE DETECTION: a revoked or expired token was presented
-    if (stored.revoked || stored.expiresAt < new Date()) {
+    if (stored.revoked || stored.expiresAt <= new Date()) {
       logger.warn({ userId: payload.sub }, 'Refresh token reuse detected — revoking all tokens');
       await refreshTokenRepository.revokeAllForUser(payload.sub);
       throw new UnauthorizedError('Refresh token reuse detected. Please log in again.');
     }
 
-    // Rotate: revoke old, issue new
-    await refreshTokenRepository.revokeByHash(tokenHash);
-
-    return this.issueTokens(payload.sub, metadata);
+    throw new UnauthorizedError('Refresh token could not be rotated');
   }
 
   async revokeRefreshToken(refreshToken: string): Promise<void> {

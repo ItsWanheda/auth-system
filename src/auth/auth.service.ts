@@ -1,4 +1,5 @@
 import { userRepository } from '../repositories/user.repository';
+import { prisma } from '../prisma/prisma.client';
 import { refreshTokenRepository } from '../repositories/refresh-token.repository';
 import { passwordResetTokenRepository } from '../repositories/password-reset-token.repository';
 import { emailVerificationTokenRepository } from '../repositories/email-verification-token.repository';
@@ -135,23 +136,38 @@ export class AuthService {
     const tokenHash = sha256(input.token);
     const stored = await passwordResetTokenRepository.findByHash(tokenHash);
 
-    if (!stored || stored.used || stored.expiresAt < new Date()) {
+    if (!stored || stored.used || stored.expiresAt <= new Date()) {
       throw new BadRequestError('Invalid or expired reset token');
     }
 
-    const user = await userRepository.findById(stored.userId);
-    if (!user) {
-      throw new NotFoundError('User not found');
-    }
-
     const passwordHash = await hashPassword(input.newPassword);
-    await userRepository.updatePassword(user.id, passwordHash);
-    await passwordResetTokenRepository.markUsed(stored.id);
 
-    // Revoke all refresh tokens for security
-    await refreshTokenRepository.revokeAllForUser(user.id);
+    // Claim the token and apply all security side effects in one transaction.
+    const userId = await prisma.$transaction(async (tx) => {
+      const consumed = await tx.passwordResetToken.updateMany({
+        where: { id: stored.id, used: false, expiresAt: { gt: new Date() } },
+        data: { used: true },
+      });
+      if (consumed.count !== 1) {
+        throw new BadRequestError('Invalid or expired reset token');
+      }
 
-    await auditService.log('PASSWORD_RESET_SUCCESS', { userId: user.id, ...metadata });
+      const user = await tx.user.findUnique({ where: { id: stored.userId }, select: { id: true } });
+      if (!user) throw new NotFoundError('User not found');
+
+      await tx.user.update({
+        where: { id: user.id },
+        data: { passwordHash },
+      });
+      await tx.refreshToken.updateMany({
+        where: { userId: user.id, revoked: false },
+        data: { revoked: true },
+      });
+
+      return user.id;
+    });
+
+    await auditService.log('PASSWORD_RESET_SUCCESS', { userId, ...metadata });
   }
 
   async changePassword(
@@ -183,14 +199,29 @@ export class AuthService {
     const tokenHash = sha256(token);
     const stored = await emailVerificationTokenRepository.findByHash(tokenHash);
 
-    if (!stored || stored.used || stored.expiresAt < new Date()) {
+    if (!stored || stored.used || stored.expiresAt <= new Date()) {
       throw new BadRequestError('Invalid or expired verification token');
     }
 
-    await userRepository.markVerified(stored.userId);
-    await emailVerificationTokenRepository.markUsed(stored.id);
+    // Consume the one-time token and verify its owner atomically.
+    const userId = await prisma.$transaction(async (tx) => {
+      const consumed = await tx.emailVerificationToken.updateMany({
+        where: { id: stored.id, used: false, expiresAt: { gt: new Date() } },
+        data: { used: true },
+      });
+      if (consumed.count !== 1) {
+        throw new BadRequestError('Invalid or expired verification token');
+      }
 
-    await auditService.log('EMAIL_VERIFICATION_SUCCESS', { userId: stored.userId, ...metadata });
+      const user = await tx.user.update({
+        where: { id: stored.userId },
+        data: { isVerified: true },
+        select: { id: true },
+      });
+      return user.id;
+    });
+
+    await auditService.log('EMAIL_VERIFICATION_SUCCESS', { userId, ...metadata });
   }
 
   async resendVerificationEmail(

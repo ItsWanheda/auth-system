@@ -40,8 +40,9 @@ services:
       EMAIL_ENABLED: "false"
       EMAIL_FROM: ${EMAIL_FROM:-no-reply@example.com}
       LOG_LEVEL: info
+    # Terminate TLS at a reverse proxy; do not expose the API over public plaintext HTTP.
     ports:
-      - "3000:3000"
+      - "127.0.0.1:3000:3000"
     volumes:
       - sqlite_data:/app/data
 

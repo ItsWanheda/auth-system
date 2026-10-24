@@ -1,0 +1,35 @@
+name: CI
+
+on:
+  push:
+    branches: ["main", "fix/**"]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    env:
+      NODE_ENV: test
+      DATABASE_URL: file:/tmp/auth-system-ci.db
+      JWT_ACCESS_SECRET: ci-access-secret-only-not-for-production-123456789
+      JWT_REFRESH_SECRET: ci-refresh-secret-only-not-for-production-123456789
+      CSRF_SECRET: ci-csrf-secret-only-not-for-production-123456789
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - name: Install locked dependencies
+        run: npm ci
+      - name: Build TypeScript and generate Prisma Client
+        run: npm run build
+      - name: Apply database migrations
+        run: npx prisma migrate deploy
+      - name: Run security regression tests
+        run: npm test

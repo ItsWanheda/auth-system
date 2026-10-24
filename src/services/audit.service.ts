@@ -26,7 +26,7 @@ export class AuditService {
     try {
       await auditLogRepository.create({
         action,
-        user: options.userId ? { connect: { id: options.userId } } : undefined,
+        userId: options.userId,
         ipAddress: options.ipAddress,
         userAgent: options.userAgent,
         metadata: options.metadata ?? undefined,

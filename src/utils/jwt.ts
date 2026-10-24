@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import jwt, { type SignOptions } from 'jsonwebtoken';
 import { env } from '../config/env';
 import type { JwtPayload } from '../types/auth.types';
@@ -8,6 +9,7 @@ export const signAccessToken = (payload: Omit<JwtPayload, 'type'>): string => {
     expiresIn: env.JWT_ACCESS_EXPIRES_IN as SignOptions['expiresIn'],
     issuer: env.APP_NAME,
     audience: env.APP_NAME,
+    jwtid: randomUUID(),
   };
   return jwt.sign({ ...payload, type: 'access' }, env.JWT_ACCESS_SECRET, options);
 };
@@ -17,6 +19,7 @@ export const signRefreshToken = (payload: Omit<JwtPayload, 'type'>): string => {
     expiresIn: env.JWT_REFRESH_EXPIRES_IN as SignOptions['expiresIn'],
     issuer: env.APP_NAME,
     audience: env.APP_NAME,
+    jwtid: randomUUID(),
   };
   return jwt.sign({ ...payload, type: 'refresh' }, env.JWT_REFRESH_SECRET, options);
 };

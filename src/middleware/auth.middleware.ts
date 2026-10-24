@@ -9,11 +9,9 @@ export const authenticate = async (
   next: NextFunction,
 ): Promise<void> => {
   try {
-    const token =
-      req.cookies?.access_token ||
-      (req.headers.authorization?.startsWith('Bearer ')
-        ? req.headers.authorization.split(' ')
-        : undefined);
+    const authorization = req.headers.authorization;
+    const bearerMatch = authorization?.match(/^Bearer\s+(\S+)$/i);
+    const token = req.cookies?.access_token ?? bearerMatch?.[1];
 
     if (!token) {
       throw new UnauthorizedError('Authentication required');

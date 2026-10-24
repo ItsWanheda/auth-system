@@ -1,5 +1,3 @@
-version: "3.9"
-
 services:
   api:
     build:
@@ -11,14 +9,15 @@ services:
       NODE_ENV: production
       PORT: 3000
       APP_NAME: "Auth System"
-      APP_URL: http://localhost:3000
-      FRONTEND_URL: http://localhost:5173
+      APP_URL: ${APP_URL:?Set APP_URL to the public HTTPS API URL}
+      FRONTEND_URL: ${FRONTEND_URL:?Set FRONTEND_URL to the public HTTPS frontend URL}
 
       # SQLite — absolute path inside container
       DATABASE_URL: "file:/app/data/auth.db"
 
-      JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:-please_change_me_access_secret_min_32_chars_long}
-      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-please_change_me_refresh_secret_min_32_chars_long}
+      # Production secrets are required; never use checked-in fallback values.
+      JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:?Set a unique random JWT_ACCESS_SECRET of at least 32 characters}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:?Set a unique random JWT_REFRESH_SECRET of at least 32 characters}
       JWT_ACCESS_EXPIRES_IN: 15m
       JWT_REFRESH_EXPIRES_IN: 30d
 
@@ -26,11 +25,11 @@ services:
       ARGON2_TIME_COST: 3
       ARGON2_PARALLELISM: 4
 
-      COOKIE_DOMAIN: localhost
-      COOKIE_SECURE: "false"
+      COOKIE_DOMAIN: ${COOKIE_DOMAIN:-}
+      COOKIE_SECURE: "true"
       COOKIE_SAMESITE: lax
 
-      CSRF_SECRET: ${CSRF_SECRET:-please_change_me_csrf_secret_min_32_chars_long}
+      CSRF_SECRET: ${CSRF_SECRET:?Set a unique random CSRF_SECRET of at least 32 characters}
       CSRF_COOKIE_NAME: x-csrf-token
       CSRF_HEADER_NAME: x-csrf-token
 
@@ -39,12 +38,13 @@ services:
       AUTH_RATE_LIMIT_MAX: 10
 
       EMAIL_ENABLED: "false"
-      EMAIL_FROM: no-reply@example.com
+      EMAIL_FROM: ${EMAIL_FROM:-no-reply@example.com}
       LOG_LEVEL: info
+    # Terminate TLS at a reverse proxy; do not expose the API over public plaintext HTTP.
     ports:
-      - "3000:3000"
+      - "127.0.0.1:3000:3000"
     volumes:
-      - sqlite_data:/app/data   # Persist the DB file across container restarts
+      - sqlite_data:/app/data
 
 volumes:
   sqlite_data:

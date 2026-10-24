@@ -2,7 +2,7 @@ import rateLimit from 'express-rate-limit';
 import { env } from '../config/env';
 import { TooManyRequestsError } from '../utils/errors';
 
-const handler = (req: unknown, res: unknown, next: (err?: unknown) => void) => {
+const handler = (_req: unknown, _res: unknown, next: (err?: unknown) => void) => {
   next(new TooManyRequestsError('Too many requests, please slow down'));
 };
 

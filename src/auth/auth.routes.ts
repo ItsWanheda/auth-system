@@ -11,7 +11,7 @@ import {
   resendVerification,
 } from './auth.controller';
 import { authenticate } from '../middleware/auth.middleware';
-import { csrfProtection, issueCsrf } from '../middleware/csrf.middleware';
+import { csrfProtection } from '../middleware/csrf.middleware';
 import { authLimiter, passwordResetLimiter } from '../middleware/rate-limit.middleware';
 import { validate } from '../middleware/validate.middleware';
 import {
@@ -58,7 +58,7 @@ router.post('/signup', authLimiter, validate(signupSchema), signup);
  *       200: { description: Login success, sets HttpOnly cookies }
  *       401: { description: Invalid credentials }
  */
-router.post('/login', authLimiter, validate(loginSchema), issueCsrf, login);
+router.post('/login', authLimiter, validate(loginSchema), login);
 
 /**
  * @openapi
@@ -70,7 +70,7 @@ router.post('/login', authLimiter, validate(loginSchema), issueCsrf, login);
  *       200: { description: New tokens issued }
  *       401: { description: Invalid / reused refresh token }
  */
-router.post('/refresh', csrfProtection, issueCsrf, refresh);
+router.post('/refresh', csrfProtection, refresh);
 
 /**
  * @openapi

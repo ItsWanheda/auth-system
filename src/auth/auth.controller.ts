@@ -3,6 +3,7 @@ import { authService } from './auth.service';
 import { setAccessTokenCookie, setRefreshTokenCookie, clearAuthCookies } from '../utils/cookies';
 import { asyncHandler } from '../utils/async-handler';
 import { UnauthorizedError } from '../utils/errors';
+import { rotateCsrfSession } from '../middleware/csrf.middleware';
 import type {
   SignupInput,
   LoginInput,
@@ -36,13 +37,14 @@ export const login = asyncHandler(async (req: Request, res: Response) => {
   const input = req.body as LoginInput;
   const tokens = await authService.login(input, getMetadata(req));
   setAuthCookies(res, tokens.accessToken, tokens.refreshToken);
+  const csrfToken = rotateCsrfSession(req, res);
 
   res.json({
     success: true,
     message: 'Logged in successfully',
     data: {
       accessToken: tokens.accessToken,
-      csrfToken: res.locals.csrfToken,
+      csrfToken,
     },
   });
 });
@@ -53,7 +55,8 @@ export const logout = asyncHandler(async (req: Request, res: Response) => {
   if (!userId) throw new UnauthorizedError();
   await authService.logout(refreshToken, userId, getMetadata(req));
   clearAuthCookies(res);
-  res.json({ success: true, message: 'Logged out successfully' });
+  const csrfToken = rotateCsrfSession(req, res);
+  res.json({ success: true, message: 'Logged out successfully', csrfToken });
 });
 
 export const refresh = asyncHandler(async (req: Request, res: Response) => {
@@ -61,6 +64,7 @@ export const refresh = asyncHandler(async (req: Request, res: Response) => {
   if (!refreshToken) throw new UnauthorizedError('Refresh token missing');
   const tokens = await authService.refresh(refreshToken, getMetadata(req));
   setAuthCookies(res, tokens.accessToken, tokens.refreshToken);
+  const csrfToken = rotateCsrfSession(req, res);
   res.json({
     success: true,
     message: 'Tokens refreshed',
@@ -90,7 +94,8 @@ export const changePassword = asyncHandler(async (req: Request, res: Response) =
   const input = req.body as ChangePasswordInput;
   await authService.changePassword(req.user!.id, input, getMetadata(req));
   clearAuthCookies(res);
-  res.json({ success: true, message: 'Password changed. Please log in again.' });
+  const csrfToken = rotateCsrfSession(req, res);
+  res.json({ success: true, message: 'Password changed. Please log in again.', csrfToken });
 });
 
 export const verifyEmail = asyncHandler(async (req: Request, res: Response) => {

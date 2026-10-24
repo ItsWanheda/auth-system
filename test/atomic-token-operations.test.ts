@@ -45,7 +45,13 @@ test('refresh, password-reset, and verification tokens are single-use under conc
       tokenService.rotateRefreshToken(issued.refreshToken),
     ]);
 
-    assert.equal(outcomes.filter((result) => result.status === 'fulfilled').length, 1);
+    const successfulRotations = outcomes.filter((result) => result.status === 'fulfilled').length;
+    const rotationDiagnostics = outcomes.map((result) =>
+      result.status === 'fulfilled'
+        ? 'fulfilled'
+        : `${result.reason instanceof Error ? result.reason.name : 'Error'}: ${String(result.reason)}`,
+    );
+    assert.equal(successfulRotations, 1, rotationDiagnostics.join(' | '));
     const persisted = await prisma.refreshToken.findUnique({
       where: { tokenHash: sha256(issued.refreshToken) },
     });

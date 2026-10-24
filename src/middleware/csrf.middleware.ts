@@ -15,7 +15,7 @@ const csrfSessionCookieOptions = {
 } as const;
 
 const {
-  generateCsrfToken,
+  generateToken,
   doubleCsrfProtection,
 } = doubleCsrf({
   getSecret: () => env.CSRF_SECRET,
@@ -32,7 +32,7 @@ const {
     domain: env.COOKIE_DOMAIN,
     path: '/',
   },
-  getCsrfTokenFromRequest: (req) => {
+  getTokenFromRequest: (req) => {
     const header = req.headers[env.CSRF_HEADER_NAME.toLowerCase()];
     return Array.isArray(header) ? header[0] : header;
   },
@@ -52,7 +52,7 @@ const setSessionIdentifier = (req: Request, res: Response, identifier: string): 
 export const rotateCsrfSession = (req: Request, res: Response): string => {
   const identifier = randomBytes(32).toString('hex');
   setSessionIdentifier(req, res, identifier);
-  const token = generateCsrfToken(req, res);
+  const token = generateToken(req, res, { overwrite: true });
   res.locals.csrfToken = token;
   return token;
 };
@@ -65,7 +65,7 @@ export const issueCsrf = (req: Request, res: Response, next: NextFunction): void
       setSessionIdentifier(req, res, randomBytes(32).toString('hex'));
     }
 
-    const token = generateCsrfToken(req, res);
+    const token = generateToken(req, res);
     res.locals.csrfToken = token;
     next();
   } catch (err) {

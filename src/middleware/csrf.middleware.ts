@@ -1,30 +1,70 @@
+import { randomBytes } from 'node:crypto';
 import { doubleCsrf } from 'csrf-csrf';
 import type { Request, Response, NextFunction } from 'express';
 import { env } from '../config/env';
 import { ForbiddenError } from '../utils/errors';
 
-const isProd = env.NODE_ENV === 'production';
+const CSRF_SESSION_COOKIE = 'csrf_session_id';
+
+const csrfSessionCookieOptions = {
+  httpOnly: true,
+  secure: env.COOKIE_SECURE,
+  sameSite: env.COOKIE_SAMESITE,
+  domain: env.COOKIE_DOMAIN,
+  path: '/',
+} as const;
 
 const {
   generateCsrfToken,
   doubleCsrfProtection,
 } = doubleCsrf({
   getSecret: () => env.CSRF_SECRET,
-  getSessionIdentifier: (req) => (req.cookies?.access_token ?? req.ip ?? 'anon'),
+  // This identifier is independent of the access JWT, which changes on login/refresh.
+  getSessionIdentifier: (req) => {
+    const identifier = req.cookies?.[CSRF_SESSION_COOKIE];
+    return typeof identifier === 'string' ? identifier : 'missing-csrf-session';
+  },
   cookieName: env.CSRF_COOKIE_NAME,
   cookieOptions: {
-    httpOnly: false, // double-submit: must be readable by JS
-    secure: isProd,
-    sameSite: env.COOKIE_SAMESITE === 'none' ? 'none' : 'lax',
+    httpOnly: false,
+    secure: env.COOKIE_SECURE,
+    sameSite: env.COOKIE_SAMESITE,
+    domain: env.COOKIE_DOMAIN,
     path: '/',
+  },
+  getCsrfTokenFromRequest: (req) => {
+    const header = req.headers[env.CSRF_HEADER_NAME.toLowerCase()];
+    return Array.isArray(header) ? header[0] : header;
   },
   size: 64,
   ignoredMethods: ['GET', 'HEAD', 'OPTIONS'],
 });
 
-/** Issues a CSRF token (call from login/signup/refresh). */
+const setSessionIdentifier = (req: Request, res: Response, identifier: string): void => {
+  req.cookies = { ...(req.cookies ?? {}), [CSRF_SESSION_COOKIE]: identifier };
+  res.cookie(CSRF_SESSION_COOKIE, identifier, csrfSessionCookieOptions);
+};
+
+/**
+ * Rotates the CSRF session binding and issues a token for the new binding.
+ * Call after login, refresh, logout, or another authentication-state transition.
+ */
+export const rotateCsrfSession = (req: Request, res: Response): string => {
+  const identifier = randomBytes(32).toString('hex');
+  setSessionIdentifier(req, res, identifier);
+  const token = generateCsrfToken(req, res);
+  res.locals.csrfToken = token;
+  return token;
+};
+
+/** Issues a CSRF token without rotating an existing authenticated session. */
 export const issueCsrf = (req: Request, res: Response, next: NextFunction): void => {
   try {
+    const existing = req.cookies?.[CSRF_SESSION_COOKIE];
+    if (typeof existing !== 'string' || !/^[a-f0-9]{64}$/i.test(existing)) {
+      setSessionIdentifier(req, res, randomBytes(32).toString('hex'));
+    }
+
     const token = generateCsrfToken(req, res);
     res.locals.csrfToken = token;
     next();
@@ -40,7 +80,7 @@ export const csrfProtection = (req: Request, _res: Response, next: NextFunction)
       if (err) return next(new ForbiddenError('Invalid or missing CSRF token'));
       next();
     });
-  } catch (err) {
+  } catch {
     next(new ForbiddenError('CSRF validation failed'));
   }
 };

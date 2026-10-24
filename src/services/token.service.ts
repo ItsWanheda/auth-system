@@ -7,7 +7,7 @@ import {
   verifyRefreshToken,
   decodeRefreshTokenExpiry,
 } from '../utils/jwt';
-import { generateRandomToken, sha256 } from '../utils/crypto';
+import { sha256 } from '../utils/crypto';
 import { UnauthorizedError } from '../utils/errors';
 import type { TokenPair } from '../types/auth.types';
 import { logger } from '../config/logger';

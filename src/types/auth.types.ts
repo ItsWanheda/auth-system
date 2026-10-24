@@ -3,6 +3,7 @@ export interface JwtPayload {
   email: string;
   username: string;
   type: 'access' | 'refresh';
+  jti?: string;
 }
 
 export interface TokenPair {

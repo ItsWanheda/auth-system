@@ -52,7 +52,7 @@ const setSessionIdentifier = (req: Request, res: Response, identifier: string): 
 export const rotateCsrfSession = (req: Request, res: Response): string => {
   const identifier = randomBytes(32).toString('hex');
   setSessionIdentifier(req, res, identifier);
-  const token = generateToken(req, res, { overwrite: true });
+  const token = generateToken(req, res, true);
   res.locals.csrfToken = token;
   return token;
 };

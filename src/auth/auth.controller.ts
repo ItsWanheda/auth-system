@@ -70,7 +70,7 @@ export const refresh = asyncHandler(async (req: Request, res: Response) => {
     message: 'Tokens refreshed',
     data: {
       accessToken: tokens.accessToken,
-      csrfToken: res.locals.csrfToken,
+      csrfToken,
     },
   });
 });

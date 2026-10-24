@@ -21,11 +21,8 @@ const envSchema = z.object({
   ARGON2_TIME_COST: z.coerce.number().int().positive().default(3),
   ARGON2_PARALLELISM: z.coerce.number().int().positive().default(4),
 
-  COOKIE_DOMAIN: z.string().default('localhost'),
-  COOKIE_SECURE: z
-    .string()
-    .transform((v) => v === 'true')
-    .default('false'),
+  COOKIE_DOMAIN: z.string().optional().transform((value) => value?.trim() || undefined),
+  COOKIE_SECURE: z.enum(['true', 'false']).transform((value) => value === 'true').default('false'),
   COOKIE_SAMESITE: z.enum(['strict', 'lax', 'none']).default('lax'),
 
   CSRF_SECRET: z.string().min(32, 'CSRF_SECRET must be at least 32 chars'),
@@ -37,12 +34,53 @@ const envSchema = z.object({
   AUTH_RATE_LIMIT_MAX: z.coerce.number().int().positive().default(10),
 
   EMAIL_FROM: z.string().email().default('no-reply@example.com'),
-  EMAIL_ENABLED: z
-    .string()
-    .transform((v) => v === 'true')
-    .default('false'),
+  EMAIL_ENABLED: z.enum(['true', 'false']).transform((value) => value === 'true').default('false'),
 
   LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace']).default('info'),
+}).superRefine((values, ctx) => {
+  if (values.NODE_ENV !== 'production') return;
+
+  const requireIssue = (path: string, message: string): void => {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: [path], message });
+  };
+  const isHttps = (value: string): boolean => {
+    try {
+      return new URL(value).protocol === 'https:';
+    } catch {
+      return false;
+    }
+  };
+
+  if (!values.COOKIE_SECURE) {
+    requireIssue('COOKIE_SECURE', 'COOKIE_SECURE=true is mandatory in production');
+  }
+  if (!isHttps(values.APP_URL)) {
+    requireIssue('APP_URL', 'APP_URL must use HTTPS in production');
+  }
+  if (!isHttps(values.FRONTEND_URL)) {
+    requireIssue('FRONTEND_URL', 'FRONTEND_URL must use HTTPS in production');
+  }
+  if (values.COOKIE_DOMAIN && /(^|\.)localhost$/i.test(values.COOKIE_DOMAIN)) {
+    requireIssue('COOKIE_DOMAIN', 'COOKIE_DOMAIN must not target localhost in production');
+  }
+  if (values.COOKIE_SAMESITE === 'none' && !values.COOKIE_SECURE) {
+    requireIssue('COOKIE_SAMESITE', 'SameSite=None requires secure cookies');
+  }
+
+  const secretFields = [
+    ['JWT_ACCESS_SECRET', values.JWT_ACCESS_SECRET],
+    ['JWT_REFRESH_SECRET', values.JWT_REFRESH_SECRET],
+    ['CSRF_SECRET', values.CSRF_SECRET],
+  ] as const;
+  const placeholders = /(replace[_ -]?with|please[_ -]?change|change[_ -]?me|your.*secret|example|changeme)/i;
+  for (const [field, secret] of secretFields) {
+    if (placeholders.test(secret)) {
+      requireIssue(field, `${field} must be replaced with a cryptographically random production secret`);
+    }
+  }
+  if (new Set(secretFields.map(([, secret]) => secret)).size !== secretFields.length) {
+    requireIssue('CSRF_SECRET', 'JWT and CSRF secrets must all be distinct');
+  }
 });
 
 const parsed = envSchema.safeParse(process.env);
